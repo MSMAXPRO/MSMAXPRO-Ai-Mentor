@@ -68,9 +68,11 @@ jobs:
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_F1757DBC5AF048F7839593EB50FBEA23 }}
 
       - name: 'Deploy to Azure Web App'
-        uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
+        uses: azure/webapps-deploy@v3
         with:
           app-name: 'MSMAXPRO-Ai-Mentor'
           slot-name: 'Production'
+          startup-command: 'python bot.py' # <<< YEH WALI LINE ADD KARNI HAI
+
           
