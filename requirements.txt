@@ -1,3 +1,53 @@
 python-telegram-bot
 google-generativeai
 Flask
+
+**Explanation:** Is file mein humne `Flask` add kiya hai, kyunki humara naya `bot.py` code Azure ko "zinda" rehne ka signal dene ke liye iska istemal karta hai.
+
+---
+### **2. How to Apply/Deploy the Bot (The Final, Sure-Shot Method)**
+
+Hum **"Direct Delivery" (Zip Deploy)** method ka use karenge, kyunki yeh sabse reliable hai.
+
+#### **Step 1: Code ka ZIP Package Banao**
+
+1.  Apne local computer par, apne `telegram-ai-bot` project folder ke **andar jao**.
+2.  Folder ke andar ki **saari files ko select karo** (`bot.py` aur `requirements.txt`). Folder ko nahi, sirf andar ki files ko.
+3.  Selected files par **Right-Click** karo.
+4.  **"Send to"** -> **"Compressed (zipped) folder"** par click karo.
+    
+5.  Is nayi zip file ka naam **`deployment.zip`** rakh do.
+
+#### **Step 2: Command Prompt (CMD) se Deploy Karo**
+
+Hum Windows ka default Command Prompt use karenge.
+
+1.  **Open Command Prompt:**
+    * Apne Windows Start Menu mein jao aur `cmd` search karo.
+    * **"Command Prompt"** application ko open karo.
+2.  **Login to Azure (Agar Zaroorat Pade):** Agar aapka session expire ho gaya hai, toh pehle login kar lo:
+    ```cmd
+    az login
+    ```
+3.  **Run the Deployment Command:**
+    * Apni `deployment.zip` file par **Shift + Right-Click** karke **"Copy as path"** select karo.
+    * Command Prompt mein neeche di gayi command ka pehla hissa type karo:
+      ```cmd
+      az webapp deployment source config-zip --resource-group MSMAXPRO-Bot-RG --name MSMAXPRO-Ai-Mentor --src 
+      ```
+    * Ek **space** do aur fir jo path aapne copy kiya tha, use **paste** kar do.
+    * **Enter** press kar do.
+
+    Aapki final command kuch aisi dikhegi:
+    ```cmd
+    az webapp deployment source config-zip --resource-group MSMAXPRO-Bot-RG --name MSMAXPRO-Ai-Mentor --src "C:\path\to\your\deployment.zip"
+    ```
+
+#### **Step 3: Verify the Deployment**
+
+1.  Jab command complete ho jaaye, **Azure Portal** mein jao.
+2.  Apne App Service ke **"Log stream"** ko open karo.
+3.  Wahan par, aapko pehle package installation ke logs dikhenge (`pip install Flask`, etc.), aur fir aapke bot aur web server ke startup messages dikhne chahiye:
+    ```
+    INFO:root:Web server started in a background thread.
+    INFO:root:Bot polling started...
