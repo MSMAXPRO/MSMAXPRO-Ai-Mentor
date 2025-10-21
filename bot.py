@@ -7,13 +7,12 @@ import google.generativeai as genai
 from datetime import date
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-from flask import Flask      # <-- NEW: Import Flask for the web server
-import threading             # <-- NEW: To run bot and web server together
+from flask import Flask
+import threading
 
 # ==============================================================================
 # --- Secure Configuration ---
 # ==============================================================================
-# Load all secrets from environment variables set on the server (Azure).
 TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
 try:
@@ -35,8 +34,9 @@ if not TELEGRAM_TOKEN or not GEMINI_API_KEY:
 
 try:
     genai.configure(api_key=GEMINI_API_KEY)
-    model = genai.GenerativeModel('gemini-pro')
-    logging.info("Google AI configured successfully.")
+    # --- THIS IS THE FIX: Using the correct, specific model name ---
+    model = genai.GenerativeModel('gemini-1.0-pro') 
+    logging.info("Google AI configured successfully with model 'gemini-1.0-pro'.")
 except Exception as e:
     logging.error(f"FATAL: Could not configure Google AI. Error: {e}")
     exit()
@@ -93,24 +93,16 @@ async def website(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await safe_reply(update, "Click the button below to visit our official website!", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def roadmaps(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Sends a button to the roadmaps page."""
-    track_user(update.effective_user.id)
     roadmaps_url = "https://codewithmsmaxpro.me/roadmaps.html"
     keyboard = [[InlineKeyboardButton("View Roadmaps", url=roadmaps_url)]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await safe_reply(update, "Click the button below to explore all the career roadmaps!", reply_markup=reply_markup)
+    await safe_reply(update, "Click the button below to explore all the career roadmaps!", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def blog(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Sends a button to the blog page."""
-    track_user(update.effective_user.id)
     blog_url = "https://codewithmsmaxpro.me/blog.html"
     keyboard = [[InlineKeyboardButton("Read Blog", url=blog_url)]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await safe_reply(update, "Click the button below to read our latest blog posts.", reply_markup=reply_markup)
+    await safe_reply(update, "Click the button below to read our latest blog posts.", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def dsa(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Fetches a DSA problem from the AI."""
-    track_user(update.effective_user.id)
     await safe_reply(update, "Finding a good DSA problem for you...")
     try:
         prompt = "Give me a beginner-friendly DSA (Data Structures and Algorithms) practice problem. State the problem clearly, provide a hint, but do not provide the solution."
@@ -121,20 +113,15 @@ async def dsa(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await safe_reply(update, "Sorry, I couldn't find a problem right now. Please try again later.")
         
 async def connect(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Sends social media links."""
-    track_user(update.effective_user.id)
     github_url = "https://github.com/MSMAXPRO"
     linkedin_url = "https://linkedin.com/in/your-linkedin-username" # <-- IMPORTANT: Update this URL
     keyboard = [
         [InlineKeyboardButton("GitHub", url=github_url)],
         [InlineKeyboardButton("LinkedIn", url=linkedin_url)]
     ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await safe_reply(update, "You can connect with me on these platforms:", reply_markup=reply_markup)
+    await safe_reply(update, "You can connect with me on these platforms:", reply_markup=InlineKeyboardMarkup(keyboard))
 
 async def idea(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Fetches a project idea from the AI."""
-    track_user(update.effective_user.id)
     await safe_reply(update, "Thinking of a new idea for you...")
     try:
         prompt = "Give me a simple but interesting project idea for a beginner programmer. Explain it in 2-3 lines."
@@ -145,8 +132,6 @@ async def idea(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await safe_reply(update, "Sorry, I couldn't think of an idea right now. Please try again later.")
 
 async def explain(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Explains a concept using the AI."""
-    track_user(update.effective_user.id)
     if not context.args:
         await safe_reply(update, "Please provide a concept to explain. Example: /explain Python lists")
         return
@@ -162,14 +147,10 @@ async def explain(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         await safe_reply(update, f"Sorry, I couldn't explain '{concept}' right now. Please try again later.")
 
 async def clear_chat(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Informs the user on how to clear chat history."""
-    track_user(update.effective_user.id)
     info_text = "For your privacy, a Telegram bot cannot clear your chat history.\n\nTo clear the chat, please tap the three dots (⋮) at the top right of this chat and select 'Clear history'."
     await safe_reply(update, info_text)
 
 async def feedback(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Receives feedback from a user."""
-    track_user(update.effective_user.id)
     if not context.args:
         await safe_reply(update, "Please write your feedback after the command. Example: /feedback This is a great bot!")
         return
@@ -203,12 +184,9 @@ flask_app = Flask(__name__)
 
 @flask_app.route('/')
 def index():
-    """A simple route to respond to Azure's health checks."""
     return "Hello! The Telegram Bot is running in the background."
 
 def run_web_server():
-    """Runs the Flask web server."""
-    # Azure provides the port in the PORT environment variable. Default to 8000 for local testing.
     port = int(os.environ.get("PORT", 8000))
     flask_app.run(host='0.0.0.0', port=port)
     
@@ -233,7 +211,6 @@ def run_bot():
     application.add_handler(CommandHandler("feedback", feedback))
     application.add_handler(CommandHandler("stats", stats))
     
-    # Register the message handler for non-command text
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
     logging.info("Bot polling started...")
@@ -242,12 +219,10 @@ def run_bot():
 if __name__ == '__main__':
     logging.info("Starting application...")
 
-    # Create a separate thread to run the Flask web server
     web_server_thread = threading.Thread(target=run_web_server)
-    web_server_thread.daemon = True  # Allows the main program to exit even if this thread is running
+    web_server_thread.daemon = True
     web_server_thread.start()
     logging.info("Web server started in a background thread.")
 
-    # Run the bot in the main thread
     run_bot()
 
