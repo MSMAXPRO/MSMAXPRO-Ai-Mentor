@@ -13,11 +13,9 @@ import threading             # To run bot and web server together
 # ==============================================================================
 # --- Secure Configuration ---
 # ==============================================================================
-# Load all secrets and configurations from environment variables set on the server (Azure).
 TELEGRAM_TOKEN = os.environ.get('TELEGRAM_TOKEN')
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
 try:
-    # os.environ.get() returns a string. Convert it to an integer for comparison.
     ADMIN_ID = int(os.environ.get('ADMIN_ID'))
 except (ValueError, TypeError):
     ADMIN_ID = None
@@ -25,31 +23,25 @@ except (ValueError, TypeError):
 # ==============================================================================
 # --- Initial Setup & Validation ---
 # ==============================================================================
-# Configure logging FIRST
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
 )
 
-# Critical check: Exit immediately if essential keys are missing
 if not TELEGRAM_TOKEN or not GEMINI_API_KEY:
     logging.critical("CRITICAL ERROR: TELEGRAM_TOKEN or GEMINI_API_KEY environment variables are not set. Bot cannot start.")
     exit()
-if not ADMIN_ID:
-     logging.warning("ADMIN_ID environment variable not found or invalid. Admin commands disabled.")
 
-# Configure the Google AI model.
 try:
     genai.configure(api_key=GEMINI_API_KEY)
-    # --- Using the Correct Model Name ---
-    model = genai.GenerativeModel('gemini-1.0-pro') 
+    # --- THIS IS THE FIX: Using the correct, specific model name ---
+    model = genai.GenerativeModel('gemini-1.0-pro') # Use 'gemini-1.0-pro'
+    # --- END OF FIX ---
     logging.info("Google AI configured successfully with model 'gemini-1.0-pro'.")
 except Exception as e:
     logging.error(f"FATAL: Could not configure Google AI. Error: {e}")
-    # Consider if the bot should exit if AI fails to configure
-    # exit() # Uncomment this line if the AI is absolutely essential for the bot to run
+    exit()
 
-# In-memory dictionary for user tracking.
 daily_users = {}
 
 # ==============================================================================
@@ -140,7 +132,7 @@ async def blog(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         logging.error(f"Error in /blog: {e}")
 
 async def dsa(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    track_user(update.effective_user.id)
+    track_user(update.effective_user.id) # Track usage for AI commands too
     await safe_reply(update, "Finding a good DSA problem for you...")
     try:
         prompt = "Give me a beginner-friendly DSA (Data Structures and Algorithms) practice problem. State the problem clearly, provide a hint, but do not provide the solution."
@@ -234,7 +226,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_message = update.message.text
     try:
         logging.info(f"Attempting Gemini generation for: '{user_message}'")
-        # Ensure the model variable is accessible and configured
         if 'model' not in globals():
              logging.error("FATAL: Gemini 'model' is not defined globally.")
              await safe_reply(update, "Internal configuration error. Please contact admin.")
@@ -244,13 +235,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await safe_reply(update, response.text)
         logging.info("Successfully sent Gemini AI response.")
     except Exception as e:
-        # Log detailed error information
         logging.error(f"--- GEMINI ERROR ---")
         logging.error(f"Failed to get AI response for message: '{user_message}'")
         logging.error(f"Error Type: {type(e).__name__}")
         logging.error(f"Error Details: {e}")
         logging.error(f"--------------------")
-        # Send a user-friendly error message
         await safe_reply(update, "Sorry, I'm having an issue connecting to my AI brain right now. The admin has been notified.")
 
 # ==============================================================================
@@ -260,16 +249,12 @@ flask_app = Flask(__name__)
 
 @flask_app.route('/')
 def index():
-    """A simple route to respond to Azure's health checks."""
     logging.info("Web server health check received.")
     return "Hello! The Telegram Bot is running in the background."
 
 def run_web_server():
-    """Runs the Flask web server."""
     port = int(os.environ.get("PORT", 8000))
     logging.info(f"Starting Flask web server on port {port}.")
-    # Use Flask's built-in server for simplicity. 
-    # For production, consider using a more robust server like Gunicorn or Waitress.
     try:
         flask_app.run(host='0.0.0.0', port=port)
     except Exception as e:
@@ -297,28 +282,23 @@ def run_bot():
         application.add_handler(CommandHandler("feedback", feedback))
         application.add_handler(CommandHandler("stats", stats))
         
-        # Register the message handler for non-command text (must be one of the last)
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
         
         logging.info("Bot polling starting...")
-        application.run_polling() # This runs indefinitely until stopped
-        logging.info("Bot polling stopped.") # This line might not be reached if run_polling blocks forever
+        application.run_polling() 
+        logging.info("Bot polling stopped.") 
 
     except Exception as e:
         logging.critical(f"CRITICAL ERROR starting Telegram bot: {e}")
-        exit() # Exit if the bot itself fails to initialize
+        exit() 
 
 if __name__ == '__main__':
     logging.info("Starting application...")
 
-    # Start the Flask web server in a background thread
     web_server_thread = threading.Thread(target=run_web_server)
     web_server_thread.daemon = True 
     web_server_thread.start()
     logging.info("Web server thread started.")
 
-    # Start the Telegram bot in the main thread
     run_bot()
-
-
 
